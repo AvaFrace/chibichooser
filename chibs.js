@@ -1,4 +1,47 @@
 // Configuration
+const imagePaths = {
+    Backgrounds: Array.from({length: 8}, (_, i) => `imgs/backgrounds/${i + 1}.webp`),
+    Hair: {
+        bangs: Array.from({length: 8}, (_, i) => `imgs/hair/bangs/${i + 1}.png`),
+        base: Array.from({length: 8}, (_, i) => `imgs/hair/base/${i + 1}.png`),
+        shaved: Array.from({length: 8}, (_, i) => `imgs/hair/shaved/${i + 1}.png`),
+        sideburns: Array.from({length: 8}, (_, i) => `imgs/hair/sideburns/${i + 1}.png`)
+    },
+    Bodies: Array.from({length: 8}, (_, i) => `imgs/bodies/${i + 1}.png`),
+    Eyes: {
+        'eye-base': Array.from({length: 8}, (_, i) => `imgs/eyes/eye-base/${i + 1}.png`),
+        iris: Array.from({length: 8}, (_, i) => `imgs/eyes/iris/${i + 1}.png`)
+    },
+    Mouth: Array.from({length: 8}, (_, i) => `imgs/mouth/${i + 1}.png`),
+    Tops: {
+        dress: Array.from({length: 8}, (_, i) => `imgs/tops/dress/${i + 1}.png`),
+        hoodie: Array.from({length: 8}, (_, i) => `imgs/tops/hoodie/${i + 1}.png`),
+        shirt: Array.from({length: 8}, (_, i) => `imgs/tops/shirt/${i + 1}.png`)
+    },
+    'Socks-tights': Array.from({length: 8}, (_, i) => `imgs/socks-tights/${i + 1}.png`),
+    Bottoms: Array.from({length: 8}, (_, i) => `imgs/bottoms/${i + 1}.png`),
+    Shoes: Array.from({length: 8}, (_, i) => `imgs/shoes/${i + 1}.png`),
+    Features: {
+        brows: Array.from({length: 8}, (_, i) => `imgs/features/brows/${i + 1}.png`),
+        'facial-hair': Array.from({length: 8}, (_, i) => `imgs/features/facial-hair/${i + 1}.png`),
+        liner: Array.from({length: 8}, (_, i) => `imgs/features/liner/${i + 1}.png`),
+        peircing: Array.from({length: 8}, (_, i) => `imgs/features/peircing/${i + 1}.png`),
+        scara: Array.from({length: 8}, (_, i) => `imgs/features/scara/${i + 1}.png`)
+    },
+    Accessories: {
+        bows: Array.from({length: 8}, (_, i) => `imgs/accessories/bows/${i + 1}.png`),
+        collars: Array.from({length: 8}, (_, i) => `imgs/accessories/collars/${i + 1}.png`),
+        glasses: Array.from({length: 8}, (_, i) => `imgs/accessories/glasses/${i + 1}.png`),
+        gloves: Array.from({length: 8}, (_, i) => `imgs/accessories/gloves/${i + 1}.png`),
+        hats: Array.from({length: 8}, (_, i) => `imgs/accessories/hats/${i + 1}.png`),
+        headphones: Array.from({length: 8}, (_, i) => `imgs/accessories/headphones/${i + 1}.png`),
+        items: Array.from({length: 8}, (_, i) => `imgs/accessories/items/${i + 1}.png`),
+        wings: Array.from({length: 8}, (_, i) => `imgs/accessories/wings/${i + 1}.png`)
+    }
+	// Add similar entries for other categories and subcategories
+};
+
+
 const categories = ['Backgrounds', 'Hair', 'Bodies', 'Eyes', 'Mouth', 'Tops', 'Socks-tights', 'Bottoms', 'Shoes', 'Features'];
 const subCategories = {
     Eyes: ['eye-base', 'iris'],
@@ -91,31 +134,23 @@ function selectSubcategory(category, subcategory) {
 
 function updateOptionsCarousel() {
     optionsCarousel.innerHTML = '';
-    const folderPath = currentSubCategory 
-        ? `imgs/${currentCategory.toLowerCase()}/${currentSubCategory}/`
-        : `imgs/${currentCategory.toLowerCase()}/`;
+    let images;
+    if (currentSubCategory) {
+        images = imagePaths[currentCategory][currentSubCategory];
+    } else {
+        images = imagePaths[currentCategory];
+    }
     
-    fetch(folderPath)
-        .then(response => response.text())
-        .then(data => {
-            const parser = new DOMParser();
-            const htmlDoc = parser.parseFromString(data, 'text/html');
-            const files = Array.from(htmlDoc.querySelectorAll('a'))
-                .map(a => a.href)
-                .filter(href => href.endsWith('.png') || href.endsWith('.webp'));
-            
-            files.forEach(file => {
-                const button = document.createElement('button');
-                button.classList.add('option-button');
-                const img = document.createElement('img');
-                img.src = file;
-                img.alt = `${currentCategory} option`;
-                button.appendChild(img);
-                button.addEventListener('click', () => selectOption(currentCategory, file));
-                optionsCarousel.appendChild(button);
-            });
-        })
-        .catch(error => console.error('Error loading images:', error));
+    images.forEach(imagePath => {
+        const button = document.createElement('button');
+        button.classList.add('option-button');
+        const img = document.createElement('img');
+        img.src = imagePath;
+        img.alt = `${currentCategory} option`;
+        button.appendChild(img);
+        button.addEventListener('click', () => selectOption(currentCategory, imagePath));
+        optionsCarousel.appendChild(button);
+    });
 }
 
 function selectOption(category, option) {
