@@ -135,18 +135,29 @@ function selectSubcategory(category, subcategory) {
 function updateOptionsCarousel() {
     optionsCarousel.innerHTML = '';
     let images;
-    if (currentSubCategory) {
+    if (currentCategory === 'Accessories') {
+        images = imagePaths.Accessories[currentSubCategory];
+    } else if (subCategories[currentCategory]) {
         images = imagePaths[currentCategory][currentSubCategory];
     } else {
         images = imagePaths[currentCategory];
     }
     
+    if (!images) {
+        console.error(`No images found for category: ${currentCategory}, subcategory: ${currentSubCategory}`);
+        return;
+    }
+
     images.forEach(imagePath => {
         const button = document.createElement('button');
         button.classList.add('option-button');
         const img = document.createElement('img');
         img.src = imagePath;
         img.alt = `${currentCategory} option`;
+        img.onerror = () => {
+            console.error(`Failed to load image: ${imagePath}`);
+            button.style.display = 'none'; // Hide the button if the image fails to load
+        };
         button.appendChild(img);
         button.addEventListener('click', () => selectOption(currentCategory, imagePath));
         optionsCarousel.appendChild(button);
@@ -190,104 +201,96 @@ function updateCharacterPreview() {
     const ctx = characterPreview.getContext('2d');
     ctx.clearRect(0, 0, characterPreview.width, characterPreview.height);
 
-    const layers = [...categories, ...accessories];
+    const layers = [...Object.keys(imagePaths), ...Object.keys(imagePaths.Accessories)];
     let loadedImages = 0;
     const totalImages = layers.length;
 
     layers.forEach(layer => {
         let option;
-        if (layer === currentCategory && currentSubCategory) {
-            option = selectedOptions[layer]?.[currentSubCategory];
-        } else {
-            option = selectedOptions[layer] || selectedAccessories[layer];
+        if (layer === 'Accessories') {
+            Object.keys(selectedAccessories).forEach(accessory => {
+                const accessoryOption = selectedAccessories[accessory];
+                if (accessoryOption) {
+                    loadImage(accessoryOption, true);
+                }
+            });
+            return;
         }
-        if (option) {
-            const img = new Image();
-            img.onload = () => {
-                if (layer === 'Backgrounds') {
-                    ctx.drawImage(img, 0, 0, characterPreview.width, characterPreview.height);
-                } else {
-                    const scale = 0.6;
-                    const scaledWidth = img.width * scale;
-                    const scaledHeight = img.height * scale;
-                    const x = 0;
-                    const y = accessories.includes(layer) ? characterPreview.height - scaledHeight : 0;
-                    ctx.drawImage(img, x, y, scaledWidth, scaledHeight);
+        if (subCategories[layer]) {
+            Object.keys(selectedOptions[layer] || {}).forEach(subcategory => {
+                option = selectedOptions[layer][subcategory];
+                if (option) {
+                    loadImage(option);
                 }
-                loadedImages++;
-                if (loadedImages === totalImages) {
-                    // All images have been loaded and drawn
-                }
-            };
-            img.src = option;
+            });
         } else {
-            loadedImages++;
+            option = selectedOptions[layer];
+            if (option) {
+                loadImage(option);
+            }
         }
     });
+
+    function loadImage(src, isAccessory = false) {
+        const img = new Image();
+        img.onload = () => {
+            if (layer === 'Backgrounds') {
+                ctx.drawImage(img, 0, 0, characterPreview.width, characterPreview.height);
+            } else {
+                const scale = 0.6;
+                const scaledWidth = img.width * scale;
+                const scaledHeight = img.height * scale;
+                const x = 0;
+                const y = isAccessory ? characterPreview.height - scaledHeight : 0;
+                ctx.drawImage(img, x, y, scaledWidth, scaledHeight);
+            }
+            loadedImages++;
+            if (loadedImages === totalImages) {
+                // All images have been loaded and drawn
+            }
+        };
+        img.onerror = () => {
+            console.error(`Failed to load image: ${src}`);
+            loadedImages++;
+            if (loadedImages === totalImages) {
+                // All images have been loaded and drawn (or failed to load)
+            }
+        };
+        img.src = src;
+    }
 }
 
 function randomizeCharacter() {
-    categories.forEach(category => {
-        if (subCategories[category]) {
-            subCategories[category].forEach(subcategory => {
-                const folderPath = `imgs/${category.toLowerCase()}/${subcategory}/`;
-                fetch(folderPath)
-                    .then(response => response.text())
-                    .then(data => {
-                        const parser = new DOMParser();
-                        const htmlDoc = parser.parseFromString(data, 'text/html');
-                        const files = Array.from(htmlDoc.querySelectorAll('a'))
-                            .map(a => a.href)
-                            .filter(href => href.endsWith('.png') || href.endsWith('.webp'));
-                        if (files.length > 0) {
-                            const randomOption = files[Math.floor(Math.random() * files.length)];
-                            if (!selectedOptions[category]) selectedOptions[category] = {};
-                            selectedOptions[category][subcategory] = randomOption;
-                        }
-                    })
-                    .catch(error => console.error('Error loading images:', error));
+    Object.keys(imagePaths).forEach(category => {
+        if (category === 'Accessories') {
+            // Handle accessories separately
+            return;
+        }
+        if (typeof imagePaths[category] === 'object' && !Array.isArray(imagePaths[category])) {
+            Object.keys(imagePaths[category]).forEach(subcategory => {
+                const options = imagePaths[category][subcategory];
+                const randomOption = options[Math.floor(Math.random() * options.length)];
+                if (!selectedOptions[category]) selectedOptions[category] = {};
+                selectedOptions[category][subcategory] = randomOption;
             });
         } else {
-            const folderPath = `imgs/${category.toLowerCase()}/`;
-            fetch(folderPath)
-                .then(response => response.text())
-                .then(data => {
-                    const parser = new DOMParser();
-                    const htmlDoc = parser.parseFromString(data, 'text/html');
-                    const files = Array.from(htmlDoc.querySelectorAll('a'))
-                        .map(a => a.href)
-                        .filter(href => href.endsWith('.png') || href.endsWith('.webp'));
-                    if (files.length > 0) {
-                        const randomOption = files[Math.floor(Math.random() * files.length)];
-                        selectedOptions[category] = randomOption;
-                    }
-                })
-                .catch(error => console.error('Error loading images:', error));
+            const options = imagePaths[category];
+            const randomOption = options[Math.floor(Math.random() * options.length)];
+            selectedOptions[category] = randomOption;
         }
     });
-    
+
+    // Randomize accessories
     selectedAccessories = {};
-    accessories.forEach(accessory => {
+    Object.keys(imagePaths.Accessories).forEach(accessory => {
         if (Math.random() > 0.5) {
-            const folderPath = `imgs/accessories/${accessory}/`;
-            fetch(folderPath)
-                .then(response => response.text())
-                .then(data => {
-                    const parser = new DOMParser();
-                    const htmlDoc = parser.parseFromString(data, 'text/html');
-                    const files = Array.from(htmlDoc.querySelectorAll('a'))
-                        .map(a => a.href)
-                        .filter(href => href.endsWith('.png'));
-                    if (files.length > 0) {
-                        const randomOption = files[Math.floor(Math.random() * files.length)];
-                        selectedAccessories[accessory] = randomOption;
-                    }
-                })
-                .catch(error => console.error('Error loading accessory images:', error));
+            const options = imagePaths.Accessories[accessory];
+            const randomOption = options[Math.floor(Math.random() * options.length)];
+            selectedAccessories[accessory] = randomOption;
         }
     });
-    
-    setTimeout(updateCharacterPreview, 500); // Give time for all fetches to complete
+
+    updateCharacterPreview();
 }
 
 function resetCharacter() {
